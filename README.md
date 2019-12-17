@@ -1,1 +1,0 @@
-# wd-game-addr

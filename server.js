@@ -7,7 +7,12 @@ const wdk = require("wikidata-sdk");
 const app = express();
 
 let pendingVerbs = fs.readFileSync(__dirname + "/verbs.txt", "utf-8").split("\n").filter(w => w.length >= 2);
-let badVerbs = []; // TODO: read and write from a file
+let badVerbs = fs.readFileSync(__dirname + "/bad-verbs.txt", "utf-8");
+if (badVerbs) badVerbs = badVerbs.split("\n").filter(w => w.length >= 2);
+
+async function saveBadVerbs() {
+  fs.writeFile(__dirname + "/bad-verbs.txt", badVerbs.join("\n"), "utf-8", () => {})
+}
 
 async function lexemeExists(search, language = "en") {
   const url = wdk.searchEntities({
@@ -231,6 +236,7 @@ async function genVerbTile() {
   if (!infs) {
     console.log("bad verb", verb);
     badVerbs.push(verb);
+    saveBadVerbs();
     return await genVerbTile();
   }
   const pastParticiple = infs.Participle || infs.PastTense;
@@ -351,6 +357,10 @@ app.get("/verb-game", async (req, res) => {
   } else if (req.query.action === "log_action") {
     if (req.query.decision === "no") {
       console.log("rejected", req.query.tile);
+      if (req.query.tile.split("-")[1]) {
+        badVerbs.push(req.query.tile.split("-")[1]);
+        saveBadVerbs();
+      }
     }
     res.send(`
       ${req.query.callback}({});

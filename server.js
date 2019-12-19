@@ -6,9 +6,13 @@ const wdk = require("wikidata-sdk");
 
 const app = express();
 
-let pendingVerbs = fs.readFileSync(__dirname + "/verbs.txt", "utf-8").split("\n").filter(w => w.length >= 2);
-let badVerbs = fs.readFileSync(__dirname + "/bad-verbs.txt", "utf-8");
-if (badVerbs) badVerbs = badVerbs.split("\n").filter(w => w.length >= 2);
+let badVerbs = fs.readFileSync(__dirname + "/bad-verbs.txt", "utf-8").split("\n").filter(w => w.length >= 2);
+let pendingVerbs = fs.readFileSync(__dirname + "/verbs.txt", "utf-8")
+  .split("\n")
+  .filter(w => w.length >= 2)
+  .filter(v => !badVerbs.includes(v))
+
+console.log(pendingVerbs.length, "pending verbs");
 
 async function saveBadVerbs() {
   fs.writeFile(__dirname + "/bad-verbs.txt", badVerbs.join("\n"), "utf-8", () => {})
@@ -230,16 +234,29 @@ async function genVerbTile() {
   const verb = pendingVerbs[randIndex];
   pendingVerbs.splice(randIndex, 1);
   
-  if (await lexemeExists(verb)) return await genVerbTile();
-  
   const infs = nlp(verb).verbs().conjugate()[0];
-  if (!infs) {
+  if (!infs || (infs.Infinitive !== verb)) {
     console.log("bad verb", verb);
     badVerbs.push(verb);
     saveBadVerbs();
     return await genVerbTile();
   }
+  
   const pastParticiple = infs.Participle || infs.PastTense;
+  
+  if (pastParticiple.endsWith("en")) {
+    console.log("en", verb);
+    badVerbs.push(verb);
+    saveBadVerbs();
+    return await genVerbTile();
+  }
+  
+  if (await lexemeExists(verb)) {
+    console.log("exists", verb);
+    badVerbs.push(verb);
+    saveBadVerbs();
+    return await genVerbTile();
+  }
   
   controls.push({
     type: "green",

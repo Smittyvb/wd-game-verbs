@@ -167,7 +167,7 @@ We have ${pastParticiple} for hours.
   };
 }
 
-app.get("/verb-game", async (req, res) => {
+app.get("/verb-import-game", async (req, res) => {
   res.contentType("text/javascript");
   if (req.query.action === "desc") {
     res.send(`
@@ -204,12 +204,6 @@ app.get("/verb-game", async (req, res) => {
   } else {
     res.status(400).send("action not supported");
   }
-});
-
-app.get("/", (req, res) => {
-  res.send(
-    `<a href="https://tools.wmflabs.org/wikidata-game/distributed/#mode=test_game&url=https%3A%2F%2Fwd-game-addr.glitch.me%2Fgame">Play</a>`
-  );
 });
 
 async function main() {

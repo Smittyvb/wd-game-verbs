@@ -34,7 +34,9 @@ async function lexemeExists(search, language = "en") {
     await new Promise((resolve, reject) => setTimeout(resolve, 10000));
     return lexemeExists(search, language);
   }
-  const json = await result.json();
+  const text = await result.text();
+  let json;
+  try { json = JSON.parse(text) } catch (e) { console.error("got invalid JSON ", text); process.exit(1); }
   if (!json.search) {
     console.log("Unable to check if lexeme exists on Wikidata, retrying in 10 seconds.");
     await new Promise((resolve, reject) => setTimeout(resolve, 10000));
@@ -63,12 +65,12 @@ async function genVerbTile() {
   
   const pastParticiple = infs.Participle || infs.PastTense;
   
-  if (pastParticiple.endsWith("en")) {
+  /*if (pastParticiple.endsWith("en")) {
     console.log("en", verb);
     badVerbs.push(verb);
     saveBadVerbs();
     return await genVerbTile();
-  }
+  }*/
   
   if (await lexemeExists(verb)) {
     console.log("exists", verb);

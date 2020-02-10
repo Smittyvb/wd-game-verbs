@@ -5,6 +5,29 @@ const searchLimit = 500;
 const url = `https://en.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Category%3AEnglish_verbs&cmlimit=${searchLimit}&format=json`;
 const irregs = ["ceebs", "cleave", "frain", "giue", "resing", "shend", "shew", "shrive", "talebear", "toshend", "toshake", "toshear"];
 
+async function doesLemmaHaveTemplate(verb) {
+  let res;
+  const url = "https://en.wiktionary.org/w/api.php?action=parse&prop=wikitext&format=json&maxlag=5&page=" + verb;
+  try {
+    res = await fetch(url, { headers: {"User-Agent": "SixTwoEight's script to determine verbs to be imported to Wikidata"} });
+  } catch (e) {
+    console.error("dLHT Unable to check if lexeme has en-verb, retrying in 10 seconds.", e);
+    await new Promise((resolve, reject) => setTimeout(resolve, 10000));
+    return await doesLemmaHaveTemplate(verb);
+  }
+  const text = await res.text();
+
+  if (text.indexOf("en-verb") > -1) return true;
+  let json = JSON.parse(text);
+  if (json.error) {
+    console.error("dLHT maxlaged checking if lexeme has en-verb, retrying in 10 seconds.", e);
+    await new Promise((resolve, reject) => setTimeout(resolve, 10000));
+    return await doesLemmaHaveTemplate(verb);
+  }
+
+  return false;
+}
+
 async function lexemeExists(search, language = "en") {
   const url = wdk.searchEntities({
     search: search,
@@ -15,13 +38,15 @@ async function lexemeExists(search, language = "en") {
   }) + "&maxlag=5";
   let result;
   try {
-    result = await fetch(url);
+    result = await fetch(url, { headers: {"User-Agent": "SixTwoEight's script to determine verbs to be imported to Wikidata"} });
   } catch (e) {
     console.error("e Unable to check if lexeme exists on Wikidata, retrying in 10 seconds.", e);
     await new Promise((resolve, reject) => setTimeout(resolve, 10000));
     return lexemeExists(search, language);
   }
-  const json = await result.json();
+  let text = await result.text();
+  let json;
+  try { json = JSON.parse(text); } catch (e) { console.error("got bad search JSON", text); process.exit(1); }
   if (!json.search) {
     console.error("no s Unable to check if lexeme exists on Wikidata, retrying in 10 seconds.", json.error.lag);
     await new Promise((resolve, reject) => setTimeout(resolve, 10000));
@@ -31,7 +56,7 @@ async function lexemeExists(search, language = "en") {
 }
 
 async function getDictLemmaPage(cmcontinue = "") {
-  const res = await fetch(url + (cmcontinue ? ("&cmcontinue=" + cmcontinue) : ""));
+  const res = await fetch(url + (cmcontinue ? ("&cmcontinue=" + cmcontinue) : ""), { headers: {"User-Agent": "SixTwoEight's script to determine verbs to be imported to Wikidata"} });
   let data;
   try {
     data = await res.json();

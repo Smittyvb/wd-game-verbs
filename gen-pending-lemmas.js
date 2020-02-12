@@ -34,7 +34,8 @@ async function lexemeExists(search, language = "en") {
     language: language,
     limit: 1,
     format: "json",
-    type: "lexeme"
+    type: "lexeme",
+    "continue": 0,
   }) + "&maxlag=5";
   let result;
   try {
@@ -49,6 +50,7 @@ async function lexemeExists(search, language = "en") {
   try { json = JSON.parse(text); } catch (e) { console.error("got bad search JSON", text); process.exit(1); }
   if (!json.search) {
     console.error("no s Unable to check if lexeme exists on Wikidata, retrying in 10 seconds.", json.error.lag);
+    console.error(json, url);
     await new Promise((resolve, reject) => setTimeout(resolve, 10000));
     return lexemeExists(search, language);
   }

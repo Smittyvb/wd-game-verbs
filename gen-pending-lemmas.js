@@ -20,7 +20,7 @@ async function doesLemmaHaveTemplate(verb) {
   if (text.indexOf("en-verb") > -1) return true;
   let json = JSON.parse(text);
   if (json.error) {
-    console.error("dLHT maxlaged checking if lexeme has en-verb, retrying in 10 seconds.", e);
+    console.error("dLHT errored (probably maxlag) checking if lexeme has en-verb, retrying in 10 seconds.", json.error);
     await new Promise((resolve, reject) => setTimeout(resolve, 10000));
     return await doesLemmaHaveTemplate(verb);
   }
@@ -84,24 +84,21 @@ function invalidVerb(str) {
 }
 
 async function lemmaCheckLoop(cmcontinue = "", total = 0) {
+  console.error("lCL");
   var dictData = await getDictLemmaPage(cmcontinue);
   let words = [];
-  var promises = [];
-  dictData.query.categorymembers.forEach(async (lexeme, i) => {
-    setTimeout(async () => {
-      if (invalidVerb(lexeme.title)) return;
-      let dataCheck = lexemeExists(lexeme.title);
-      promises.push(dataCheck);
-      dataCheck = await dataCheck;
-      total++;
-      if (!dataCheck) {
-        words.push(lexeme);
-        //console.log("checking", lexeme.title);
-      }
-    }, i * 34);
-  });
-  await new Promise((resolve, reject) => {setTimeout(resolve, searchLimit * 34);});
-  await Promise.all(promises);
+  for (let a = 0; a < dictData.query.categorymembers.length; a++) {
+    let lexeme = dictData.query.categorymembers[a];
+    if (invalidVerb(lexeme.title)) continue;
+    let dataCheck = await lexemeExists(lexeme.title);
+    total++;
+    if (!dataCheck && !(await doesLemmaHaveTemplate(lexeme.title))) {
+      words.push(lexeme);
+      console.error("added", lexeme.title);
+    }
+  }
+  //await new Promise((resolve, reject) => {setTimeout(resolve, searchLimit * 34);});
+  //await Promise.all(promises);
   console.error("checked group");
   for (var i = 0; i < words.length; i++) {
     if (invalidVerb(words[i].title)) continue;

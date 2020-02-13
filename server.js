@@ -23,6 +23,7 @@ async function lexemeExists(search, language = "en") {
     search: search,
     language: language,
     limit: 1,
+    "continue": 1,
     format: "json",
     type: "lexeme"
   }); // no maxlag
@@ -175,7 +176,8 @@ app.get("/verb-import-game", async (req, res) => {
     res.send(`
       ${req.query.callback}({
         "label":{ "en":"Add verbs from Wiktionary" },
-        "description":{ "en":"Wiktionary verb adder. Conjugation is done automatically, please verify it" },
+        "description":{ "en":"Import verbs without a {{en-verb}} template from Wiktionary. (verbs with the template will be able to be imported automatically) Conjugation is done automatically, please verify it." },
+        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Labiodental_flap_%28Gentium%29.svg/120px-Labiodental_flap_%28Gentium%29.svg.png",
       })
     `);
   } else if (req.query.action === "tiles") {

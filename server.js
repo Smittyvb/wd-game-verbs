@@ -10,6 +10,9 @@ let badVerbs = fs.readFileSync(__dirname + "/bad-verbs.txt", "utf-8").split("\n"
 let pendingVerbs = fs.readFileSync(__dirname + "/verbs.txt", "utf-8")
   .split("\n")
   .filter(w => !w.startsWith("~"))
+  .filter(w => !w.endsWith("ing"))
+  .filter(w => !w.endsWith("ed"))
+  .filter(w => !w.endsWith("s"))
   .filter(w => w.length >= 2)
   .filter(v => !badVerbs.includes(v))
 

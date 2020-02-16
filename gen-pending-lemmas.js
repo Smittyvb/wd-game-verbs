@@ -4,7 +4,7 @@ const wtf = require("wtf_wikipedia");
 
 const searchLimit = 500;
 const url = `https://en.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Category%3AEnglish_verbs&cmlimit=${searchLimit}&format=json`;
-const irregs = ["ceebs", "cleave", "frain", "giue", "resing", "shend", "shew", "shrive", "talebear", "toshend", "toshake", "toshear"];
+const irregs = ["ceebs", "cleave", "frain", "giue", "resing", "shend", "shew", "shrive", "talebear", "toshend", "toshake", "toshear", "thas", "thass", "XQs"];
 
 function getDocInfo(doc) {
   let invalidStems = ["d", "ed", "es", "ing", "s"];
@@ -188,7 +188,7 @@ async function lemmaCheckLoop(cmcontinue = "", total = 0) {
       const docInfo = getDocInfo(doc);
       if (docInfo.error) {
         console.error("docInfo error", docInfo.error);
-        words.push(lexeme);
+        words.push(lexeme.title);
       } else {
         words.push(`~${docInfo.present}~${docInfo.thirdPersonSingular}~${docInfo.simplePast}~${docInfo.presentParticiple}~${docInfo.pastParticiple}`);
       }
@@ -199,9 +199,9 @@ async function lemmaCheckLoop(cmcontinue = "", total = 0) {
   //await Promise.all(promises);
   console.error("checked group");
   for (var i = 0; i < words.length; i++) {
-    if (invalidVerb(words[i].title)) continue;
-    console.log(words[i].title);
-    console.error(words[i].title);
+    //if (invalidVerb(words[i].title)) continue;
+    console.log(words[i]);
+    //console.error(words[i].title);
   }
   if (total > 3) {
     console.error("total reached");

@@ -33,7 +33,7 @@ async function lexemeExists(search, language = "en") {
   }); // no maxlag
   let result;
   try {
-    result = await fetch(url);
+    result = await fetch(url, { headers: {"User-Agent": "SixTwoEight's Verb adder game"}});
   } catch (e) {
     console.log("Unable to check if lexeme exists on Wikidata, retrying in 10 seconds.");
     await new Promise((resolve, reject) => setTimeout(resolve, 10000));
@@ -179,6 +179,7 @@ app.get("/verb-import-game", async (req, res) => {
   if (req.query.action === "desc") {
     res.send(`
       ${req.query.callback}({
+        "instructions": { "en": "These verbs don't have a valid {{en-verb}} template (or they have multiple) on Wiktionary. Please verify the machine-generated conjugations." }
         "label":{ "en":"Add verbs from Wiktionary" },
         "description":{ "en":"Import verbs without a {{en-verb}} template from Wiktionary. (verbs with the template will be able to be imported automatically) Conjugation is done automatically, please verify it." },
         "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Labiodental_flap_%28Gentium%29.svg/120px-Labiodental_flap_%28Gentium%29.svg.png",

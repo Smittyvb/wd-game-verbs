@@ -9,6 +9,7 @@ const app = express();
 let badVerbs = fs.readFileSync(__dirname + "/bad-verbs.txt", "utf-8").split("\n").filter(w => w.length >= 2);
 let pendingVerbs = fs.readFileSync(__dirname + "/verbs.txt", "utf-8")
   .split("\n")
+  .filter(w => !w.startsWith("~"))
   .filter(w => w.length >= 2)
   .filter(v => !badVerbs.includes(v))
 

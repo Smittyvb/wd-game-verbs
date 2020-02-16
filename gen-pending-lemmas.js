@@ -1,31 +1,122 @@
 const fetch = require("node-fetch");
 const wdk = require("wikidata-sdk");
+const wtf = require("wtf_wikipedia");
 
 const searchLimit = 500;
 const url = `https://en.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Category%3AEnglish_verbs&cmlimit=${searchLimit}&format=json`;
 const irregs = ["ceebs", "cleave", "frain", "giue", "resing", "shend", "shew", "shrive", "talebear", "toshend", "toshake", "toshear"];
 
-async function doesLemmaHaveTemplate(verb) {
-  let res;
-  const url = "https://en.wiktionary.org/w/api.php?action=parse&prop=wikitext&format=json&maxlag=5&page=" + verb;
-  try {
-    res = await fetch(url, { headers: {"User-Agent": "SixTwoEight's script to determine verbs to be imported to Wikidata"} });
-  } catch (e) {
-    console.error("dLHT Unable to check if lexeme has en-verb, retrying in 10 seconds.", e);
-    await new Promise((resolve, reject) => setTimeout(resolve, 10000));
-    return await doesLemmaHaveTemplate(verb);
+function getDocInfo(doc) {
+  let invalidStems = ["d", "ed", "es", "ing", "s"];
+  let templates = doc.templates("en-verb");
+  if (templates.length !== 1) return {error: "multiple or no en-verb templates"};
+  const t = templates[0];
+  const verb = doc.options.title;
+  
+  // start with auto-infered data, then change it if needed
+  let data = {
+    present: verb,
+    thirdPersonSingular: `${verb}s`,
+    simplePast: `${verb}ed`,
+    presentParticiple: `${verb}ing`,
+    pastParticiple: `${verb}ed`,
+  };
+  
+  if (t.list) {
+    // possiblities:
+    // 1. legacy syntax
+    // 2. specifing all forms
+    // 3. {{en-verb|d}}
+    // 4. {{en-verb|differennt-stem|d}}
+    if (t.list[0] === verb && t.list.length > 3) {
+      console.warn(verb, "is legacy");
+      return {error: "Legacy syntax"};
+    }
+    
+    if (t.list.length === 3 && invalidStems.includes(t.list[2])) {
+      /*
+        {{en-verb|bus|s|es}} (added an s)
+        {{en-verb|cr|i|ed}} (changed the -y to -i)
+        {{en-verb|t|y|ing}} (changed the -ie to -y)
+        {{en-verb|trek|k|ed}} (added a k)
+      */
+      let ending = t.list[2];
+      let formToChange = ({
+        d: "all-past",
+        ed: "all-past",
+        ing: "presentParticiple",
+        es: "thirdPersonSingular",
+        s: "thirdPersonSingular",
+      })[ending];
+      if (!formToChange) return {error: "Invalid formToChange"};
+      if (formToChange === "all-past") {
+        data.simplePast = `${t.list[0]}${t.list[1]}${ending}`;
+        data.pastParticiple = `${t.list[0]}${t.list[1]}${ending}`;
+        data.presentParticiple = `${t.list[0]}${t.list[1]}ing`;
+        data.thirdPersonSingular = `${verb}s`;
+      } else if (formToChange === "presentParticiple") {
+        data.presentParticiple = `${t.list[0]}${t.list[1]}${ending}`;
+        // data.simplePast = `${t.list[0]}${t.list[1]}d`;
+        data.pastParticiple = `${verb}d`;
+        data.simplePast = `${verb}d`;
+      } else if (formToChange === "thirdPersonSingular") {
+        data.thirdPersonSingular = `${t.list[0]}${t.list[1]}${ending}`;
+        data.simplePast = `${t.list[0]}${t.list[1]}ed`;
+        data.pastParticiple = `${t.list[0]}${t.list[1]}ed`;
+        data.presentParticiple = `${t.list[0]}${t.list[1]}ing`;
+      }
+    } else if ((t.list.length === 3) && !invalidStems.includes(t.list[2])) {
+      data.thirdPersonSingular = t.list[0];
+      data.presentParticiple = t.list[1];
+      data.simplePast = t.list[2];
+      data.pastParticiple = t.list[2];
+    } else if (t.list.length === 4) {
+      data.thirdPersonSingular = t.list[0];
+      data.presentParticiple = t.list[1];
+      data.simplePast = t.list[2];
+      data.pastParticiple = t.list[3];
+    } else {
+      let stem = verb;
+      let list = t.list;
+      if (!invalidStems.includes(t.list[0])) {
+        stem = t.list[0];
+        list.shift();
+      }
+     
+      data = {
+        ...data,
+        //present: stem,
+        //thirdPersonSingular: `${stem}s`,
+        simplePast: `${stem}ed`,
+        presentParticiple: `${stem}ing`,
+        pastParticiple: `${stem}ed`,
+      };
+      
+      if (list[0] === "es") {
+        data.thirdPersonSingular = `${stem}es`;
+      } else if (list[0] === "d") {
+        data.simplePast = `${stem}d`;
+        data.pastParticiple = `${stem}d`;
+      } else if (list[0] === "ies") {
+        data.thirdPersonSingular = `${stem}ies`;
+        data.pastParticiple = `${stem}ied`;
+        data.simplePast = `${stem}ied`;
+        data.presentParticiple = `${verb}ing`;
+      } else {
+        // just a stem was provided
+        // {{en-verb|admir|ing}} is the same as {{en-verb|admir}}
+      }
+    }
+    if (t.pres_3sg) data.thirdPersonSingular = t.pres_3sg;
+    if (t.pres_ptc) data.presentParticiple = t.pres_ptc;
+    if (t.past) {
+      data.simplePast = t.past;
+      data.pastParticiple = t.past;
+    }
+    if (t.past_ptc) data.pastParticiple = t.past_ptc;
   }
-  const text = await res.text();
-
-  if (text.indexOf("en-verb") > -1) return true;
-  let json = JSON.parse(text);
-  if (json.error) {
-    console.error("dLHT errored (probably maxlag) checking if lexeme has en-verb, retrying in 10 seconds.", json.error);
-    await new Promise((resolve, reject) => setTimeout(resolve, 10000));
-    return await doesLemmaHaveTemplate(verb);
-  }
-
-  return false;
+  
+  return data;
 }
 
 async function lexemeExists(search, language = "en") {
@@ -92,9 +183,16 @@ async function lemmaCheckLoop(cmcontinue = "", total = 0) {
     if (invalidVerb(lexeme.title)) continue;
     let dataCheck = await lexemeExists(lexeme.title);
     total++;
-    if (!dataCheck && !(await doesLemmaHaveTemplate(lexeme.title))) {
-      words.push(lexeme);
-      console.error("added", lexeme.title);
+    if (!dataCheck) {
+      const doc = await wtf.fetch(lexeme.title, "enwiktionary", { "Api-User-Agent": "SixTwoEight's script to determine verbs to be imported to Wikidata" });
+      const docInfo = getDocInfo(doc);
+      if (docInfo.error) {
+        console.error("docInfo error", docInfo.error);
+        words.push(lexeme);
+      } else {
+        words.push(`~${docInfo.present}~${docInfo.thirdPersonSingular}~${docInfo.simplePast}~${docInfo.presentParticiple}~${docInfo.pastParticiple}`);
+      }
+      console.error("added", words[words.length - 1]);
     }
   }
   //await new Promise((resolve, reject) => {setTimeout(resolve, searchLimit * 34);});

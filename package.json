@@ -9,11 +9,13 @@
   "scripts": {
     "start": "node server.js"
   },
+  "//4": "NOTE: wtf_wikipedia hasn't released a version with correct User-Agent handling yet, so we use the unreleased version",
   "dependencies": {
+    "compromise": "^12.2.1",
     "express": "^4.17.1",
     "node-fetch": "^2.6.0",
-    "compromise": "^12.2.1",
-    "wikidata-sdk": "^7.2.0"
+    "wikidata-sdk": "^7.2.0",
+    "wtf_wikipedia": "git+https://github.com/spencermountain/wtf_wikipedia.git"
   },
   "engines": {
     "node": "8.x"

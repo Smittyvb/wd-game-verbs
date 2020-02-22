@@ -177,14 +177,12 @@ We have ${pastParticiple} for hours.
 app.get("/verb-import-game", async (req, res) => {
   res.contentType("text/javascript");
   if (req.query.action === "desc") {
-    res.send(`
-      ${req.query.callback}({
-        "instructions": { "en": "These verbs don't have a valid {{en-verb}} template (or they have multiple) on Wiktionary. Please verify the machine-generated conjugations." }
+    res.send(`${req.query.callback || ""}(${JSON.stringify({
+        "instructions": { "en": "These verbs don't have a valid en-verb template (or they have multiple) on Wiktionary. Please verify the machine-generated conjugations." },
         "label":{ "en":"Add verbs from Wiktionary" },
-        "description":{ "en":"Import verbs without a {{en-verb}} template from Wiktionary. (verbs with the template will be able to be imported automatically) Conjugation is done automatically, please verify it." },
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Labiodental_flap_%28Gentium%29.svg/120px-Labiodental_flap_%28Gentium%29.svg.png",
-      })
-    `);
+        "description":{ "en":"Import verbs without a en-verb template from Wiktionary. (verbs with the template will be able to be imported automatically) Conjugation is done automatically, please verify it." },
+        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Labiodental_flap_%28Gentium%29.svg/120px-Labiodental_flap_%28Gentium%29.svg.png"
+      })})`);
   } else if (req.query.action === "tiles") {
     let tiles = [];
     let num = parseInt(req.query.num, 10);
